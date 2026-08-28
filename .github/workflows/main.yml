@@ -47,10 +47,9 @@ jobs:
         uses: gradle/actions/setup-gradle@v5
 
       - name: Build Release APK
-        
-          chmod +x ./gradlew
-          ./gradlew --no-daemon --max-workers=1 assembleRelease
-
+  run: |
+    chmod +x ./gradlew
+    ./gradlew --no-daemon --max-workers=1 assembleRelease
       - name: Set short SHA
         id: set_sha
         run: echo "short_sha=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
@@ -85,7 +84,7 @@ jobs:
         shell: bash
         run: |
           release_tag="main-build-${{ github.run_id }}-${{ github.run_attempt }}-${{ needs.build.outputs.short_sha }}"
-          asset_name="https:Apk-Editor-PLus-${{ needs.build.outputs.short_sha }}-run${{ github.run_number }}.apk"
+          asset_name="Apk-Editor-PLus-${{ needs.build.outputs.short_sha }}-run${{ github.run_number }}.apk"
 
           echo "release_tag=${release_tag}" >> "$GITHUB_OUTPUT"
           echo "asset_name=${asset_name}" >> "$GITHUB_OUTPUT"
