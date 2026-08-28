@@ -51,18 +51,28 @@ jobs:
         run: |
           chmod +x ./gradlew
           ./gradlew --no-daemon --max-workers=1 assembleRelease
+
       - name: Set short SHA
         id: set_sha
         run: echo "short_sha=${GITHUB_SHA:0:7}" >> $GITHUB_OUTPUT
 
-        - name: Rename APK with commit hash
+      - name: Find and Rename APK (Signed or Unsigned)
+        shell: bash
         run: |
-          # البحث عن ملف release apk بغض النظر عن اسمه الدقيق (موقع أو غير موقع)
-          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
-          if [ -f "$APK_PATH" ]; then
-            mv "$APK_PATH" "app/build/outputs/apk/release/app-release-${{ steps.set_sha.outputs.short_sha }}.apk"
+          RELEASE_DIR="app/build/outputs/apk/release"
+          TARGET_NAME="app-release-${{ steps.set_sha.outputs.short_sha }}.apk"
+
+          # البحث عن ملف APK داخل مجلد الـ release سواء كان موقعاً أم غير موقع
+          APK_FILE=$(find "$RELEASE_DIR" -maxdepth 1 -name "*.apk" ! -name "$TARGET_NAME" | head -n 1)
+
+          if [ -n "$APK_FILE" ] && [ -f "$APK_FILE" ]; then
+            echo "Found APK file at: $APK_FILE"
+            mv "$APK_FILE" "$RELEASE_DIR/$TARGET_NAME"
+            echo "Renamed $APK_FILE to $TARGET_NAME"
           else
-            echo "Error: APK file not found!" && exit 1
+            echo "Error: No APK file generated in $RELEASE_DIR"
+            ls -la "$RELEASE_DIR" || true
+            exit 1
           fi
 
       - name: Upload Release APK
@@ -79,6 +89,8 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v6
+
       - name: Download Artifacts
         uses: actions/download-artifact@v8
         with:
@@ -98,17 +110,22 @@ jobs:
           cp ./release-assets/app-release-${{ needs.build.outputs.short_sha }}.apk \
              "./release-assets/${asset_name}"
 
-      
       - name: Create release for this build
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
+          # التاكد من وجود ملف release-notes.md، وإن لم يوجد يتم إنشاء وصف افتراضي
+          NOTES_FLAG="--notes-file release-notes.md"
+          if [ ! -f "release-notes.md" ]; then
+            NOTES_FLAG="--notes Automated development build for commit ${{ needs.build.outputs.short_sha }}."
+          fi
+
           gh release create "${{ steps.release_meta.outputs.release_tag }}" \
             -R "${GITHUB_REPOSITORY}" \
             "./release-assets/${{ steps.release_meta.outputs.asset_name }}" \
             --title "Development Build #${{ github.run_number }} (${{ needs.build.outputs.short_sha }})" \
-            --notes-file release-notes.md \
+            $NOTES_FLAG \
             --latest \
             --target "${GITHUB_SHA}"
 
