@@ -39,7 +39,8 @@ jobs:
             echo "$GOOGLE_SERVICES_JSON" > app/google-services.json
             echo "Successfully generated app/google-services.json from secret."
           else
-            echo '{"project_info":{"project_number":"000000000000","project_id":"dummy","storage_bucket":"dummy.appspot.com"},"client":[{"client_info":{"mobilesdk_app_id":"1:000000000000:android:0000000000000000","android_client_info":{"package_name":"pro.sketchware"}},"oauth_client":[],"api_key":[{"current_key":"dummy"}],"services":{"appinvite_service":{"status":1}}}],"configuration_version":"1"}' > app/google-services.json
+            # fallback dummy JSON (make sure this is acceptable for your build)
+            echo '{"project_info":{"project_number":"000000000000","project_id":"dummy","storage_bucket":"dummy.appspot.com"},"client":[{"client_info":{"mobilesdk_app_id":"1:000000000000:android:00000"}}]}' > app/google-services.json
             echo "Generated dummy app/google-services.json fallback."
           fi
 
@@ -47,12 +48,13 @@ jobs:
         uses: gradle/actions/setup-gradle@v5
 
       - name: Build Release APK
-  run: |
-    chmod +x ./gradlew
-    ./gradlew --no-daemon --max-workers=1 assembleRelease
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --no-daemon --max-workers=1 assembleRelease
+
       - name: Set short SHA
         id: set_sha
-        run: echo "short_sha=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+        run: echo "short_sha=${GITHUB_SHA:0:7}" >> $GITHUB_OUTPUT
 
       - name: Rename APK with commit hash
         run: |
@@ -96,15 +98,15 @@ jobs:
         shell: bash
         run: |
           cat <<EOF > release-notes.md
-          Automated development build for commit \`${{ needs.build.outputs.short_sha }}\`.
+Automated development build for commit \`${{ needs.build.outputs.short_sha }}\`.
 
-          - Branch: \`${{ github.ref_name }}\`
-          - Commit: \`${{ github.sha }}\`
-          - Run number: \`${{ github.run_number }}\`
-          - Workflow run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+- Branch: \`${{ github.ref_name }}\`
+- Commit: \`${{ github.sha }}\`
+- Run number: \`${{ github.run_number }}\`
+- Workflow run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-          This prerelease was generated automatically from the latest successful CI build for this run on \`main\`.
-          EOF
+This prerelease was generated automatically from the latest successful CI build for this run on \`main\`.
+EOF
 
       - name: Create release for this build
         env:
@@ -169,5 +171,3 @@ jobs:
                 release_id: release.id
               });
             }
-
-  
