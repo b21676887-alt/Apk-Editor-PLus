@@ -94,20 +94,7 @@ jobs:
           cp ./release-assets/app-release-${{ needs.build.outputs.short_sha }}.apk \
              "./release-assets/${asset_name}"
 
-      - name: Write release notes
-        shell: bash
-        run: |
-          cat <<EOF > release-notes.md
-Automated development build for commit \`${{ needs.build.outputs.short_sha }}\`.
-
-- Branch: \`${{ github.ref_name }}\`
-- Commit: \`${{ github.sha }}\`
-- Run number: \`${{ github.run_number }}\`
-- Workflow run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-This prerelease was generated automatically from the latest successful CI build for this run on \`main\`.
-EOF
-
+      
       - name: Create release for this build
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
