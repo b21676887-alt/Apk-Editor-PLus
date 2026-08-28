@@ -56,10 +56,15 @@ jobs:
         id: set_sha
         run: echo "short_sha=${GITHUB_SHA:0:7}" >> $GITHUB_OUTPUT
 
-      - name: Rename APK with commit hash
+        - name: Rename APK with commit hash
         run: |
-          mv app/build/outputs/apk/release/app-release.apk \
-             app/build/outputs/apk/release/app-release-${{ steps.set_sha.outputs.short_sha }}.apk
+          # البحث عن ملف release apk بغض النظر عن اسمه الدقيق (موقع أو غير موقع)
+          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          if [ -f "$APK_PATH" ]; then
+            mv "$APK_PATH" "app/build/outputs/apk/release/app-release-${{ steps.set_sha.outputs.short_sha }}.apk"
+          else
+            echo "Error: APK file not found!" && exit 1
+          fi
 
       - name: Upload Release APK
         uses: actions/upload-artifact@v7
